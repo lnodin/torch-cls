@@ -9,6 +9,8 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
+from sklearn.model_selection import GridSearchCV
+
 
 from imutils import paths
 import argparse
@@ -28,7 +30,7 @@ class SimplePreprocessor:
     def preprocess(self, image):
         image = cv2.resize(image, (self.width, self.height),
                            interpolation=self.inter)
-        image = cv2.blur(image, (self.kernel_width, self.kernel_height))
+        # image = cv2.blur(image, (self.kernel_width, self.kernel_height))
         # resize the image to a fixed size, ignoring the aspect
         # ratio
         return image
@@ -80,7 +82,7 @@ class SimpleDatasetLoader:
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dataset", required=True, help="path to input dataset")
-ap.add_argument("-k", "--neighbors", type=int, default=1,
+ap.add_argument("-k", "--neighbors", type=int, default=3,
                 help="# of nearest neighbors for classification")
 ap.add_argument("-j", "--jobs", type=int, default=-1,
                 help="# of jobs for k-NN distance (-1 uses all available cores)")
@@ -124,13 +126,28 @@ test_labels = tele.fit_transform(test_labels)
 (trainX, validX, trainY, validY) = train_test_split(
     train_data, train_labels, test_size=0.25, random_state=42)
 
-
-# train and evaluate a k-NN classifier on the raw pixel intensities
 print("[INFO] evaluating k-NN classifier...")
-model = KNeighborsClassifier(
-    n_neighbors=args["neighbors"], n_jobs=args["jobs"])
-model.fit(trainX, trainY)
+# define param grid
+param_grid = dict(n_neighbors=range(1, 10))
+
+# define model
+model = KNeighborsClassifier(n_jobs=args["jobs"])
+
+# defining parameter range
+grid = GridSearchCV(model, param_grid, cv=10,
+                    scoring='accuracy', return_train_score=False, verbose=1)
+
+# fitting the model for grid search
+# train and evaluate a k-NN classifier on the raw pixel intensities
+grid_search = grid.fit(trainX, trainY)
+
+best_k = grid_search.best_params_['n_neighbors']
+print("[INFO] best k for k-NN: {}".format(best_k))
+
+accuracy = grid_search.best_score_ * 100
+print("[INFO] accuracy for our training dataset with tuning is : {:.2f}%".format(
+    accuracy))
 
 # print classification report
-print(classification_report(test_labels, model.predict(
+print(classification_report(test_labels, grid_search.best_estimator_.predict(
     test_data), target_names=tele.classes_))
