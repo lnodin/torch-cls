@@ -5,7 +5,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 
 
-def data_loader(data_dir, batch_size=20, valid_size=0.2):
+def data_loader(data_dir, transform_compose, batch_size=20, valid_size=0.2):
 
     def npy_loader(img_path):
         sample = torch.from_numpy(np.load(img_path))
