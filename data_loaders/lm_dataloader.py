@@ -1,5 +1,5 @@
 import torch
-from torchvision import datasets
+from torchvision import datasets, transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
 import numpy as np
@@ -10,18 +10,31 @@ def data_loader(data_dir, batch_size=20, valid_size=0.2):
     def npy_loader(img_path):
         sample = torch.from_numpy(np.load(img_path))
         return sample
-    train_dir = data_dir + '/train'
-    test_dir = data_dir + '/test'
+    train_dir = data_dir + '/train/'
+    test_dir = data_dir + '/test/'
 
-    train_dataset = datasets.DatasetFolder(
+    transform_compose = transforms.Compose([
+        transforms.Resize((224,224)), # anh chuan dau vao 224 x 224
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))])
+
+    # train_dataset = datasets.DatasetFolder(
+    #     root=train_dir,
+    #     loader=npy_loader,
+    #     extensions=('.npy'))
+    train_dataset = datasets.ImageFolder(
         root=train_dir,
-        loader=npy_loader,
-        extensions=('.npy'))
+        transform=transform_compose
+    )
 
-    test_dataset = datasets.DatasetFolder(
+    # test_dataset = datasets.DatasetFolder(
+    #     root=test_dir,
+    #     loader=npy_loader,
+    #     extensions=('.npy'))
+    test_dataset = datasets.ImageFolder(
         root=test_dir,
-        loader=npy_loader,
-        extensions=('.npy'))
+        transform=transform_compose
+    )
 
     # number of subprocesses to use for data loading
     num_workers = 0
@@ -42,7 +55,6 @@ def data_loader(data_dir, batch_size=20, valid_size=0.2):
                                                sampler=train_sampler, num_workers=num_workers)
     valid_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                sampler=valid_sampler, num_workers=num_workers)
-    test_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-                                              sampler=valid_sampler, num_workers=num_workers)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, num_workers=num_workers, shuffle=False)
 
     return train_loader, valid_loader, test_loader, train_dataset.classes
